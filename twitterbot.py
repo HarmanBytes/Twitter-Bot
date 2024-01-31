@@ -47,6 +47,14 @@ class BotFunctions(UI):
         except Exception as e:
             print(e)
 
+    def remove_popup(self):
+        try:
+            pop_up = UI.waitfor_elementpresence(self.driver, 10, By.XPATH, UI.pop_up)
+            pop_up.click()
+            print('Pop up closed')
+        except:
+            print('No pop up found.')
+
     def password_in(self, password):
         try:
             password_input = UI.waitfor_elementpresence(self.driver, 15, By.XPATH, UI.password_input)
@@ -73,6 +81,7 @@ class BotFunctions(UI):
             time.sleep(2)
 
             self.password_in(password)
+            self.remove_popup()
         except Exception as e:
             print(e)
 
@@ -97,11 +106,15 @@ class BotFunctions(UI):
             time.sleep(2)
 
             self.password_in(password)
-
+            self.remove_popup()
         except Exception as e:
             print(e)
 
+    def fetch_tweet_data(self):
+        pass
 
+    def generate_csv(self):
+        pass
 class TwitterBot(BotFunctions):
     """
     Implicit waits are added temporarily for testing purposes
