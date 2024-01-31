@@ -1,1 +1,3 @@
 .venv
+user_details.txt
+__pycache__/
