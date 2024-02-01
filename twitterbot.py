@@ -169,7 +169,11 @@ class BotFunctions(UI):
             # from tweet_by_container
             tweet_details['display_name'] = tweet_by_container.find_element(by='xpath', value=UI.tweet_by_display_name).text
             tweet_details['username'] = tweet_by_container.find_element(by='xpath', value=UI.tweet_by_username).text
-            tweet_details['tweet_datetime'] = tweet_by_container.find_element(by='xpath', value=UI.tweet_datetime).get_attribute('datetime')
+
+            # tweet datetime
+            tweet_datetime = tweet_by_container.find_element(by='xpath', value=UI.tweet_datetime).get_attribute('datetime')
+            tweet_datetime = datetime.fromisoformat(tweet_datetime)
+            tweet_details['tweet_datetime'] = tweet_datetime.strftime('%H:%M:%S %d-%m-%Y %z')
 
             # tweet text
             tweet_details['tweet_text'] = tweet_container.find_element(by='xpath', value=UI.tweet_text).text
