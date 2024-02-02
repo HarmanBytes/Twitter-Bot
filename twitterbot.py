@@ -7,6 +7,8 @@ import time
 import pandas as pd
 from datetime import datetime
 import pytz
+import traceback
+import sys
 
 
 class UI:
@@ -237,6 +239,58 @@ class BotFunctions(UI):
         except Exception as e:
             print(e)
 
+    def scroll_down(self, scroll_to):
+        try:
+            self.driver.execute_script(f'return window.scrollTo(0,{scroll_to});')
+        except Exception as e:
+            print(e)
+
+    def current_scroll_position(self):
+        try:
+            return self.driver.execute_script('return window.scrollY;')
+        except Exception as e:
+            print(e)
+
+    def viewport_length(self):
+        try:
+            return self.driver.execute_script(f'return window.innerHeight;')
+        except Exception as e:
+            print(e)
+
+    def page_height(self):
+        try:
+            return self.driver.execute_script("return document.body.scrollHeight;")
+        except Exception as e:
+            print(e)
+
+    def check_page_end(self, last_scroll_position):
+        try:
+            if self.current_scroll_position() == last_scroll_position:
+                return True
+            else:
+                return False
+        except Exception as e:
+            print(e)
+
+    def remove_duplicate(self, trends, last_trend_location):
+        position = 0
+        try:
+            if last_trend_location is None:
+                return trends
+            else:
+                for trend in trends:
+                    if trend.location['y'] <= last_trend_location:
+                        position += 1
+                if len(trends) == position:
+                    return []
+                return trends[position:]
+        except Exception as e:
+            print(e)
+            # Use traceback to get the line number
+            traceback_details = traceback.extract_tb(sys.exc_info()[2])
+            line_number = traceback_details[len(traceback_details) - 1][1]
+            print(f"Error occurred on line {line_number}: {e}")
+
     def load_tweets(self):
         try:
             tweets = UI.wait_for_elements_presence(self.driver, 15, By.XPATH, UI.tweet_container)
@@ -263,26 +317,54 @@ class BotFunctions(UI):
             print(e)
 
     def explore_tab_data(self, tab_name):
+        last_trend_location = None
+        last_scroll_position = None
         try:
             self.click_on_explore_tabs(tab_name)
-            trend_window = UI.waitfor_elementpresence(self.driver, 15, By.XPATH, UI.trend_window)
-            trends = UI.wait_for_elements_presence(trend_window, 15, By.XPATH, UI.trends)
-            for trend in trends:
-                trending_data = self.trending_dict[tab_name].copy()
-                single_trend_data = UI.wait_for_elements_presence(trend, 15, By.XPATH, UI.single_trend_data)
-                if tab_name == 'trending':
-                    rank_and_trending = [i.strip() for i in single_trend_data[0].text.split('\u00B7')]
-                    trending_data['rank'] = rank_and_trending[0]
-                    trending_data['trending_in'] = ' '.join(rank_and_trending[1:])
-                else:
-                    trending_data['trending_in'] = single_trend_data[0].text
-                trending_data['tag_or_text'] = single_trend_data[1].text
-                trending_data['posts'] = single_trend_data[2].text.split()[0]
-                trending_data['fetch_datetime'] = self.current_time()
+            while True:
+                trend_window = UI.waitfor_elementpresence(self.driver, 15, By.XPATH, UI.trend_window)
+                trends = UI.wait_for_elements_presence(trend_window, 15, By.XPATH, UI.trends)
+                trends = self.remove_duplicate(trends, last_trend_location)
 
-                self.trending_df[tab_name] = pd.concat((self.trending_df[tab_name], pd.DataFrame([trending_data])))
+                if not trends:
+                    break
+
+                for trend in trends:
+                    try:
+                        trending_data = self.trending_dict[tab_name].copy()
+                        single_trend_data = UI.wait_for_elements_presence(trend, 15, By.XPATH, UI.single_trend_data)
+                        if tab_name == 'trending':
+                            rank_and_trending = [i.strip() for i in single_trend_data[0].text.split('\u00B7')]
+                            trending_data['rank'] = rank_and_trending[0]
+                            trending_data['trending_in'] = ' '.join(rank_and_trending[1:])
+                        else:
+                            trending_data['trending_in'] = single_trend_data[0].text
+                        trending_data['tag_or_text'] = single_trend_data[1].text
+                        trending_data['posts'] = single_trend_data[2].text.split()[0]
+                        trending_data['fetch_datetime'] = self.current_time()
+
+                        self.trending_df[tab_name] = pd.concat((self.trending_df[tab_name], pd.DataFrame([trending_data])))
+                    except Exception as e:
+                        # Use traceback to get the line number
+                        traceback_details = traceback.extract_tb(sys.exc_info()[2])
+                        line_number = traceback_details[len(traceback_details) - 1][1]
+                        print(f"Error occurred on line {line_number}: {e}")
+
+                # checking end
+                if self.check_page_end(last_scroll_position) or last_trend_location == trends[-1].location['y']:
+                    break
+
+                last_trend_location = trends[-1].location['y']
+                last_scroll_position = self.current_scroll_position()
+                self.scroll_down(last_trend_location)
+                time.sleep(5)
+
         except Exception as e:
             print(e)
+            # Use traceback to get the line number
+            traceback_details = traceback.extract_tb(sys.exc_info()[2])
+            line_number = traceback_details[len(traceback_details) - 1][1]
+            print(f"Error occurred on line {line_number}: {e}")
 
     def data_from_explore_tabs(self):
         try:
