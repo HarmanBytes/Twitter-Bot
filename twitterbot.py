@@ -41,6 +41,20 @@ class UI:
     tweet_by_username = './/span[starts-with(text(),"@")]'
     tweet_datetime = './/time'
 
+    # explore section
+    explore_btn = '//a[@data-testid="AppTabBar_Explore_Link"]'
+    explore_tabs = '//div[(@role="tablist") and (@data-testid="ScrollSnap-List")]'
+    explore_tabs_dict = {
+        "trending": './/span[text()="Trending"]',
+        "news": './/span[text()="News"]',
+        "sports": './/span[text()="Sports"]',
+        "entertainment": './/span[text()="Entertainment"]'
+    }
+
+    # trends
+    trend_window = '//div[@aria-label="Timeline: Explore"]'
+    trends = '//div[@data-testid="trend"]'
+    single_trend_data = './div/div'
 
     @classmethod
     def waitfor_elementpresence(cls, driver, wait_time, by, value):
@@ -62,6 +76,79 @@ class BotFunctions(UI):
         super().__init__()
         self.driver = driver
         self.df = pd.DataFrame()
+
+        self.trending_df = {
+            'trending': pd.DataFrame(),
+            'news': pd.DataFrame(),
+            'sports': pd.DataFrame(),
+            'entertainment': pd.DataFrame()
+        }
+
+        self.trending_dict = {
+            'trending': {
+                'rank': 'NA',
+                'trending_in': 'Unknown',
+                'tag_or_text': 'NA',
+                'posts': 'NA',
+                'fetch_datetime': 'NA'
+            },
+            'news': {
+                'trending_in': 'Unknown',
+                'tag_or_text': 'NA',
+                'posts': 'NA',
+                'fetch_datetime': 'NA'
+            },
+            'sports': {
+                'trending_in': 'Unknown',
+                'tag_or_text': 'NA',
+                'posts': 'NA',
+                'fetch_datetime': 'NA'
+            },
+            'entertainment': {
+                'trending_in': 'Unknown',
+                'tag_or_text': 'NA',
+                'posts': 'NA',
+                'fetch_datetime': 'NA'
+            }
+        }
+
+    def reset_data(self):
+        self.df = pd.DataFrame()
+
+        self.trending_df = {
+            'trending': pd.DataFrame(),
+            'news': pd.DataFrame(),
+            'sports': pd.DataFrame(),
+            'entertainment': pd.DataFrame()
+        }
+
+        self.trending_dict = {
+            'trending': {
+                'rank': 'NA',
+                'trending_in': 'Unknown',
+                'tag_or_text': 'NA',
+                'posts': 'NA',
+                'fetch_datetime': 'NA'
+            },
+            'news': {
+                'trending_in': 'Unknown',
+                'tag_or_text': 'NA',
+                'posts': 'NA',
+                'fetch_datetime': 'NA'
+            },
+            'sports': {
+                'trending_in': 'Unknown',
+                'tag_or_text': 'NA',
+                'posts': 'NA',
+                'fetch_datetime': 'NA'
+            },
+            'entertainment': {
+                'trending_in': 'Unknown',
+                'tag_or_text': 'NA',
+                'posts': 'NA',
+                'fetch_datetime': 'NA'
+            }
+        }
 
     def current_time(self):
         # current datetime
@@ -157,6 +244,55 @@ class BotFunctions(UI):
         except Exception as e:
             print(e)
 
+    def click_on_explore(self):
+        try:
+            explore_btn = UI.waitfor_elementpresence(self.driver, 15, By.XPATH, UI.explore_btn)
+            explore_btn.click()
+
+            explore_tabs = UI.waitfor_elementpresence(self.driver, 15, By.XPATH, UI.explore_tabs)
+            return explore_tabs
+        except Exception as e:
+            print(e)
+
+    def click_on_explore_tabs(self, tab_name):
+        try:
+            explore_tabs = self.click_on_explore()
+            tab = UI.waitfor_elementpresence(explore_tabs, 15, By.XPATH, UI.explore_tabs_dict[tab_name])
+            tab.click()
+        except Exception as e:
+            print(e)
+
+    def explore_tab_data(self, tab_name):
+        try:
+            self.click_on_explore_tabs(tab_name)
+            trend_window = UI.waitfor_elementpresence(self.driver, 15, By.XPATH, UI.trend_window)
+            trends = UI.wait_for_elements_presence(trend_window, 15, By.XPATH, UI.trends)
+            for trend in trends:
+                trending_data = self.trending_dict[tab_name].copy()
+                single_trend_data = UI.wait_for_elements_presence(trend, 15, By.XPATH, UI.single_trend_data)
+                if tab_name == 'trending':
+                    rank_and_trending = [i.strip() for i in single_trend_data[0].text.split('\u00B7')]
+                    trending_data['rank'] = rank_and_trending[0]
+                    trending_data['trending_in'] = ' '.join(rank_and_trending[1:])
+                else:
+                    trending_data['trending_in'] = single_trend_data[0].text
+                trending_data['tag_or_text'] = single_trend_data[1].text
+                trending_data['posts'] = single_trend_data[2].text.split()[0]
+                trending_data['fetch_datetime'] = self.current_time()
+
+                self.trending_df[tab_name] = pd.concat((self.trending_df[tab_name], pd.DataFrame([trending_data])))
+        except Exception as e:
+            print(e)
+
+    def data_from_explore_tabs(self):
+        try:
+            self.explore_tab_data('trending')
+            self.explore_tab_data('news')
+            self.explore_tab_data('sports')
+            self.explore_tab_data('entertainment')
+        except Exception as e:
+            print(e)
+
     def fetch_single_tweet_data(self, tweet):
         try:
             tweet_container = tweet
@@ -204,8 +340,12 @@ class BotFunctions(UI):
         except Exception as e:
             print(e)
 
-    def generate_csv(self):
-        self.df.to_csv('testing.csv', index=False)
+    def generate_csv(self, csv_of, file_name='tweets'):
+        if csv_of == 'tweets':
+            self.df.to_csv(f'{file_name}.csv', index=False)
+        elif csv_of == 'trending':
+            for name, df in self.trending_df.items():
+                df.to_csv(f'{name}.csv', index=False)
 
 
 class TwitterBot(BotFunctions):
