@@ -1,3 +1,11 @@
 .venv
 user_details.txt
 __pycache__/
+.idea/
+testing.csv
+news.csv
+sports.csv
+trending.csv
+entertainment.csv
+tweets.csv
+learning.py

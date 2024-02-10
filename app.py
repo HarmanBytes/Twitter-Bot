@@ -1,17 +1,19 @@
 from twitterbot import TwitterBot as tb
 import time
 
-
+# create your own txt file in format "username password"
 with open('user_details.txt', 'r') as f:
     info = f.read()
 
-username, email, password = info.split(' ')
-
+username, password = info.split(' ')
 bot = tb()
-# tested -- works successfully
-# bot.login_with_username(username, password)
 
 # tested -- works successfully
-bot.login_with_email(username, email, password)
+bot.login(username, password)
+bot.fetch_multiple_tweets_data()
+bot.generate_csv(csv_of='tweets')
+bot.data_from_explore_tabs()
+bot.generate_csv(csv_of='trending')
 
-time.sleep(30)
+print('finished')
+time.sleep(60)
