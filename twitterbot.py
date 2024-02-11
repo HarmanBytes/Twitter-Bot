@@ -1,4 +1,3 @@
-# importing libraries
 from selenium import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.edge.options import Options
@@ -10,6 +9,8 @@ from datetime import datetime
 import pytz
 import traceback
 import sys
+import os
+import pickle
 
 
 class UI:
@@ -91,7 +92,7 @@ class BotFunctions(UI):
     A class representing bot functions for interacting with Twitter.
     Inherits UI class for accessing XPath selectors.
     """
-    def __init__(self, driver):
+    def __init__(self, driver, username):
         """
         Initializes BotFunctions object.
 
@@ -100,6 +101,7 @@ class BotFunctions(UI):
         """
         super().__init__()
         self.driver = driver
+        self.username = str(username)
         self.tweets_df = pd.DataFrame()
 
         self.trending_df = {
@@ -235,7 +237,99 @@ class BotFunctions(UI):
             else:
                 print(e)
 
-    def login(self, username, password):
+    def open_website(self, url='https://twitter.com/?lang=en'):
+        """
+        Open the Twitter website login page.
+
+        Parameter:
+            url (str): (optional) The URL of the Twitter website login page. Defaults to 'https://twitter.com/?lang=en'.
+
+        Returns:
+            None
+        """
+        self.driver.get(url)
+
+    def refresh_page(self):
+        """
+        Refreshes the webpage.
+
+        Returns: None
+        """
+        self.driver.refresh()
+
+    def save_cookies(self):
+        """
+        Save the cookies for the default user to a pickle file.
+
+        This method retrieves the cookies for the default user (stored in the object attribute `self.username`),
+        adds or updates them in a pickle file.
+
+        Returns: None
+        """
+        username = self.username
+
+        file_path = "cookies.pkl"
+        user_cookie = {username: self.driver.get_cookies()}
+
+        if os.path.exists(file_path) and os.path.getsize(file_path) > 0:
+            # File exists and is not empty, load existing data
+            with open(file_path, "rb") as cookies:
+                data = pickle.load(cookies)
+        else:
+            data = {}
+
+        # Add or update user cookie data
+        data.update(user_cookie)
+
+        # Write the updated data back to the file
+        with open(file_path, "wb") as cookies:
+            pickle.dump(data, cookies)
+
+    def load_cookies(self):
+        """
+        Load cookies for the default user from a pickle file.
+
+        Returns:
+            True if cookies are successfully loaded and added, False otherwise.
+        """
+        username = self.username
+
+        if os.path.exists('cookies.pkl') and os.path.getsize('cookies.pkl') > 0:
+            with open("cookies.pkl", "rb") as cookies:
+                data = pickle.load(cookies)
+                if username in data:
+                    for cookie in data[username]:
+                        self.driver.add_cookie(cookie)
+                    return True
+                else:
+                    return False
+        else:
+            return False
+
+    def delete_cookies(self):
+        """
+        Delete cookies for the default user from a pickle file.
+
+        Returns:
+            True if cookies are successfully deleted, False otherwise.
+        """
+        username = self.username
+
+        if os.path.exists('cookies.pkl') and os.path.getsize('cookies.pkl') > 0:
+            with open("cookies.pkl", "rb") as cookies:
+                data = pickle.load(cookies)
+
+            if username in data:
+                data.pop(username)
+                with open("cookies.pkl", "wb") as cookies:
+                    pickle.dump(data, cookies)
+                return True
+            else:
+                return False
+        else:
+            return False
+
+    def login(self, password, username=None):
         """
         Login to Twitter.
 
@@ -250,6 +344,9 @@ class BotFunctions(UI):
         Raises:
             Any exceptions that occur during the login process are caught and printed.
         """
+        if username is None:
+            username = self.username
+
         try:
             # Click the sign-in button, Input username/email/phone and Click next
             self.perform(self.driver, 15, By.XPATH, UI.sign_in_btn, action='click')
@@ -623,16 +720,14 @@ class TwitterBot(BotFunctions):
     Returns:
         None
     """
-    def __init__(self):
+    def __init__(self, username):
         self.driver = None
         self.options = Options()
-        self.url = 'https://twitter.com/?lang=en'
         self.driver_loc = 'D:/Software/edgeDriver/msedgedriver.exe'
         self.edge_service = webdriver.EdgeService(executable_path=self.driver_loc)
         self.driver = webdriver.Edge(service=self.edge_service, options=self.options)
         self.driver.maximize_window()
-        self.driver.get(self.url)
-        super().__init__(self.driver)
+        super().__init__(self.driver, username)
 
 
 
